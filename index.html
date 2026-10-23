@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>Накопи на квартиру</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+:root{
+  --bg:#f4f5f7;--card:#fff;--text:#16181d;--hint:#7b828e;--accent:#e8590c;--accent-t:#fff;
+  --line:#e6e8ec;--good:#2b9a5b;--bad:#d63b3b;--field:#f0f2f5;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#121417;--card:#1c1f24;--text:#f1f2f4;--hint:#8c94a0;--line:#2a2e35;--field:#262a31;--accent:#ff7a2f;--accent-t:#111;
+}}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--text);
+  font:16px/1.4 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif}
+.wrap{max-width:560px;margin:0 auto;padding:16px 16px calc(32px + env(safe-area-inset-bottom))}
+h1{font-size:22px;margin:4px 0 2px}
+.sub{color:var(--hint);font-size:14px;margin-bottom:14px}
+.card{background:var(--card);border-radius:16px;padding:14px 14px 6px;margin-bottom:12px}
+.seg{display:flex;background:var(--field);border-radius:12px;padding:3px;margin-bottom:12px}
+.seg button{flex:1;border:0;background:none;color:var(--hint);font:inherit;font-size:14px;font-weight:600;padding:9px 4px;border-radius:10px}
+.seg button.on{background:var(--card);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+label{display:block;font-size:13px;color:var(--hint);margin:0 0 5px}
+.f{margin-bottom:12px}
+.in{display:flex;align-items:center;background:var(--field);border-radius:12px;padding:0 12px}
+.in input{flex:1;min-width:0;border:0;background:none;color:var(--text);font:inherit;font-size:18px;font-weight:600;padding:11px 0;outline:none}
+.in span{color:var(--hint);font-weight:600;margin-left:6px}
+.row{display:flex;gap:10px}.row .f{flex:1;min-width:0}
+.hero{background:var(--accent);color:var(--accent-t);border-radius:18px;padding:18px;margin-bottom:12px}
+.hero small{opacity:.85;font-size:13px}
+.hero .big{font-size:34px;font-weight:800;line-height:1.1;margin:4px 0 6px}
+.hero .when{font-size:15px;opacity:.95}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.st{background:var(--card);border-radius:14px;padding:12px}
+.st b{display:block;font-size:17px}.st small{color:var(--hint);font-size:12px}
+canvas{width:100%;height:190px;display:block}
+.sec{font-size:13px;font-weight:700;color:var(--hint);text-transform:uppercase;letter-spacing:.04em;margin:16px 4px 8px}
+.cmp{width:100%;border-collapse:collapse;font-size:14px}
+.cmp td{padding:9px 0;border-bottom:1px solid var(--line)}
+.cmp tr:last-child td{border:0}.cmp td:last-child{text-align:right;font-weight:700}
+.note{font-size:13px;color:var(--hint);padding:2px 4px 10px}
+.warn{background:rgba(214,59,59,.12);color:var(--bad);border-radius:12px;padding:10px 12px;font-size:14px;margin-bottom:12px;display:none}
+input[type=range]{width:100%;accent-color:var(--accent)}
+.btn{display:block;width:100%;border:0;border-radius:14px;background:var(--accent);color:var(--accent-t);font:inherit;font-weight:700;padding:14px;margin-top:6px}
+.btn.alt{background:var(--field);color:var(--text)}
+.good{color:var(--good)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🏠 Накопи на квартиру</h1>
+  <div class="sub">Сколько копить, с учётом вклада и роста цен</div>
+
+  <div class="seg" id="mode">
+    <button data-m="full" class="on">Полностью</button>
+    <button data-m="mort">Первый взнос (ипотека)</button>
+  </div>
+
+  <div class="card">
+    <div class="f"><label>Цена квартиры сегодня</label><div class="in"><input id="price" inputmode="numeric"><span>₽</span></div></div>
+    <div class="f" id="dpBox" style="display:none"><label>Первый взнос, % от цены: <b id="dpV">20</b>%</label><input type="range" id="dp" min="10" max="50" step="1" value="20"></div>
+    <div class="row">
+      <div class="f"><label>Уже накоплено</label><div class="in"><input id="saved" inputmode="numeric"><span>₽</span></div></div>
+      <div class="f"><label>Откладываю в месяц</label><div class="in"><input id="monthly" inputmode="numeric"><span>₽</span></div></div>
+    </div>
+    <div class="row">
+      <div class="f"><label>Доход вклада, % годовых</label><div class="in"><input id="rate" inputmode="decimal"><span>%</span></div></div>
+      <div class="f"><label>Рост цен на жильё, % в год</label><div class="in"><input id="growth" inputmode="decimal"><span>%</span></div></div>
+    </div>
+    <div class="f"><label>Увеличиваю взнос каждый год на</label><div class="in"><input id="idx" inputmode="decimal"><span>%</span></div></div>
+  </div>
+
+  <div class="warn" id="warn"></div>
+
+  <div class="hero">
+    <small>Накопишь на квартиру через</small>
+    <div class="big" id="res">—</div>
+    <div class="when" id="when"></div>
+  </div>
+
+  <div class="stats">
+    <div class="st"><b id="sTarget">—</b><small>нужно будет к тому моменту</small></div>
+    <div class="st"><b id="sOwn">—</b><small>ты отложишь сам</small></div>
+    <div class="st"><b id="sInt" class="good">—</b><small>заработают проценты</small></div>
+    <div class="st"><b id="sGrow">—</b><small>«съест» рост цен</small></div>
+  </div>
+
+  <div class="card" style="padding:10px 10px 4px"><canvas id="ch"></canvas>
+    <div class="note">Оранжевая линия — твои накопления, серая — цена квартиры (цель).</div></div>
+
+  <div class="sec">Сравнение</div>
+  <div class="card">
+    <table class="cmp" id="cmp"></table>
+  </div>
+
+  <div class="sec">Хочу быстрее</div>
+  <div class="card">
+    <div class="f"><label>Накопить за <b id="yV">5</b> лет</label><input type="range" id="yrs" min="1" max="25" step="1" value="5"></div>
+    <div class="note" style="color:var(--text);font-size:15px" id="need"></div>
+  </div>
+
+  <button class="btn" id="share">Поделиться расчётом</button>
+  <div class="note" style="margin-top:12px">Расчёт ориентировочный: проценты капитализируются ежемесячно, налог на доход по вкладам и изменения ставок не учитываются. Это не инвестиционная рекомендация.</div>
+</div>
+
+<script>
+const tg = window.Telegram && Telegram.WebApp;
+const BOT = 'nakopi_moneydoger_bot';
+if (tg){ try{ tg.ready(); tg.expand(); }catch(e){} }
+
+const $ = id => document.getElementById(id);
+const MAXM = 600;
+let mode = 'full';
+const D = {price:12000000, saved:500000, monthly:60000, rate:14, growth:8, idx:5, dp:20};
+
+const fmt = n => Math.round(n).toLocaleString('ru-RU').replace(/ /g,' ');
+const rub = n => fmt(n)+' ₽';
+const short = n => n>=1e6 ? (n/1e6).toFixed(n>=1e7?1:2).replace('.',',').replace(/,?0+$/,'')+' млн ₽' : fmt(n)+' ₽';
+const num = s => parseFloat(String(s).replace(/\s/g,'').replace(',','.')) || 0;
+
+function dur(m){
+  const y = Math.floor(m/12), mm = m%12, out=[];
+  const pl=(n,a,b,c)=>{const k=n%100; const l=n%10; return n+' '+((k>10&&k<20)?c:l==1?a:(l>1&&l<5)?b:c)};
+  if(y) out.push(pl(y,'год','года','лет'));
+  if(mm) out.push(pl(mm,'месяц','месяца','месяцев'));
+  return out.join(' ') || 'сразу';
+}
+function dateAfter(m){
+  const d = new Date(); d.setMonth(d.getMonth()+m);
+  return d.toLocaleDateString('ru-RU',{month:'long',year:'numeric'});
+}
+
+function sim(o){
+  const g = Math.pow(1+o.growth/100,1/12)-1;
+  const r = o.rate/100/12;
+  const k = Math.pow(1+o.idx/100,1/12);
+  const frac = o.mort ? o.dp/100 : 1;
+  let bal=o.saved, price=o.price, c=o.monthly, own=0;
+  const bs=[bal], ts=[price*frac];
+  if (bal >= price*frac) return {m:0,bs,ts,own:0,interest:0,target:price*frac,price0:price*frac};
+  for (let m=1;m<=MAXM;m++){
+    bal = bal*(1+r)+c; own+=c; c*=k; price*=(1+g);
+    bs.push(bal); ts.push(price*frac);
+    if (bal >= price*frac) return {m,bs,ts,own,interest:bal-o.saved-own,target:price*frac,price0:price0f(o)};
+  }
+  return {m:null,bs,ts,own,interest:bal-o.saved-own,target:price*frac,price0:price0f(o)};
+}
+const price0f = o => o.price*(o.mort?o.dp/100:1);
+
+function opts(extra){ return Object.assign({mort:mode==='mort'},D,extra||{}); }
+
+function needMonthly(years){
+  const n = years*12;
+  let lo=0, hi=1e9;
+  for (let i=0;i<60;i++){
+    const mid=(lo+hi)/2, s=sim(opts({monthly:mid}));
+    if (s.m!==null && s.m<=n) hi=mid; else lo=mid;
+  }
+  return hi;
+}
+
+function draw(s){
+  const cv=$('ch'), dpr=window.devicePixelRatio||1;
+  const w=cv.clientWidth,h=cv.clientHeight; cv.width=w*dpr; cv.height=h*dpr;
+  const c=cv.getContext('2d'); c.scale(dpr,dpr); c.clearRect(0,0,w,h);
+  const cs=getComputedStyle(document.documentElement);
+  const acc=cs.getPropertyValue('--accent').trim(), hint=cs.getPropertyValue('--hint').trim(), line=cs.getPropertyValue('--line').trim();
+  const n=s.bs.length-1; if(n<1){return}
+  const maxY=Math.max(...s.ts,...s.bs)*1.05;
+  const L=44,R=8,T=8,B=22, X=i=>L+(w-L-R)*i/n, Y=v=>T+(h-T-B)*(1-v/maxY);
+  c.font='11px sans-serif'; c.fillStyle=hint; c.strokeStyle=line; c.lineWidth=1;
+  for(let i=0;i<=4;i++){const v=maxY*i/4,y=Y(v);c.beginPath();c.moveTo(L,y);c.lineTo(w-R,y);c.stroke();c.textAlign='right';c.fillText(v>=1e6?(v/1e6).toFixed(0)+'м':fmt(v/1e3)+'т',L-5,y+4)}
+  c.textAlign='center';
+  const yrs=n/12, stepY=yrs>20?5:yrs>10?2:1;
+  for(let y=0;y<=yrs;y+=stepY){c.fillText(y?y+' л':'сейчас',X(y*12),h-6)}
+  const path=(arr,col,wd,dash)=>{c.beginPath();c.setLineDash(dash||[]);c.strokeStyle=col;c.lineWidth=wd;arr.forEach((v,i)=>i?c.lineTo(X(i),Y(v)):c.moveTo(X(i),Y(v)));c.stroke();c.setLineDash([])};
+  path(s.ts,hint,2,[5,4]); path(s.bs,acc,3);
+  if(s.m){c.fillStyle=acc;c.beginPath();c.arc(X(s.m),Y(s.bs[s.m]),5,0,7);c.fill()}
+}
+
+function calc(){
+  const s = sim(opts());
+  const warn=$('warn');
+  const years = s.m===null ? null : s.m;
+  if (s.m===null){
+    $('res').textContent='больше 50 лет';
+    $('when').textContent='При таких вводных цель убегает быстрее, чем ты копишь';
+    warn.style.display='block';
+    warn.textContent='Цены растут быстрее, чем копятся деньги. Увеличь ежемесячный взнос или ставку — смотри блок «Хочу быстрее» ниже.';
+  } else if (s.m===0){
+    $('res').textContent='уже хватает 🎉'; $('when').textContent='Накоплений достаточно прямо сейчас'; warn.style.display='none';
+  } else {
+    $('res').textContent=dur(s.m); $('when').textContent='≈ '+dateAfter(s.m); warn.style.display='none';
+  }
+  $('sTarget').textContent=short(s.target);
+  $('sOwn').textContent=short(s.own+D.saved);
+  $('sInt').textContent='+'+short(Math.max(0,s.interest));
+  $('sGrow').textContent=short(Math.max(0,s.target-s.price0));
+  draw(s);
+
+  const rows=[['Под матрасом (0%)', sim(opts({rate:0}))],['На вкладе '+D.rate+'%', s],['Вклад + цены не растут', sim(opts({growth:0}))]];
+  $('cmp').innerHTML=rows.map(([n,r])=>`<tr><td>${n}</td><td>${r.m===null?'> 50 лет':r.m===0?'уже':dur(r.m)}</td></tr>`).join('');
+
+  const y=+$('yrs').value; $('yV').textContent=y;
+  const nm=needMonthly(y);
+  $('need').innerHTML = nm>=1e8 ? 'Не получится при таких условиях.' : `Чтобы успеть за <b>${y}</b> ${y%10==1&&y!=11?'год':(y%10>1&&y%10<5&&(y<10||y>20))?'года':'лет'}, откладывай <b>${rub(nm)}</b> в месяц ${D.monthly?`(сейчас ${rub(D.monthly)})`:''}`;
+  window.__last={s,y,nm};
+  try{ localStorage.setItem('kv',JSON.stringify({D,mode})) }catch(e){}
+}
+
+const map={price:'price',saved:'saved',monthly:'monthly',rate:'rate',growth:'growth',idx:'idx'};
+function bind(){
+  for (const k in map){
+    const el=$(k);
+    el.value = (k==='rate'||k==='growth'||k==='idx') ? String(D[k]).replace('.',',') : fmt(D[k]);
+    el.addEventListener('input',()=>{
+      if(!(k==='rate'||k==='growth'||k==='idx')){const v=num(el.value);el.value=v?fmt(v):'';D[k]=v}
+      else D[k]=num(el.value);
+      calc();
+    });
+  }
+  $('dp').addEventListener('input',e=>{D.dp=+e.target.value;$('dpV').textContent=D.dp;calc()});
+  $('yrs').addEventListener('input',calc);
+  document.querySelectorAll('#mode button').forEach(b=>b.onclick=()=>{
+    mode=b.dataset.m; document.querySelectorAll('#mode button').forEach(x=>x.classList.toggle('on',x===b));
+    $('dpBox').style.display=mode==='mort'?'block':'none'; calc();
+  });
+  $('share').onclick=()=>{
+    const l=window.__last, s=l.s;
+    const t=`🏠 Накоплю на квартиру за ${s.m===null?'50+ лет':dur(s.m)}: цена ${short(D.price)}, откладываю ${rub(D.monthly)}/мес, вклад ${D.rate}%. Посчитай свою:`;
+    const url='https://t.me/'+BOT;
+    const link='https://t.me/share/url?url='+encodeURIComponent(url)+'&text='+encodeURIComponent(t);
+    if(tg&&tg.openTelegramLink) tg.openTelegramLink(link); else window.open(link,'_blank');
+  };
+}
+try{const sv=JSON.parse(localStorage.getItem('kv')||'null'); if(sv){Object.assign(D,sv.D);mode=sv.mode||'full'}}catch(e){}
+bind();
+$('dp').value=D.dp;$('dpV').textContent=D.dp;
+document.querySelectorAll('#mode button').forEach(x=>x.classList.toggle('on',x.dataset.m===mode));
+$('dpBox').style.display=mode==='mort'?'block':'none';
+calc();
+addEventListener('resize',calc);
+</script>
+</body>
+</html>
