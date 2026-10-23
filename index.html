@@ -55,6 +55,10 @@ details.more summary::-webkit-details-marker{display:none}
 details.more summary:after{content:"▾";color:var(--hint)}
 details.more[open] summary:after{content:"▴"}
 details.more .inner{padding-bottom:6px}
+.steps{list-style:none;counter-reset:s;margin:0 0 12px;padding:0}
+.steps li{counter-increment:s;position:relative;padding:0 0 12px 34px;font-size:15px;line-height:1.5}
+.steps li:before{content:counter(s);position:absolute;left:0;top:0;width:24px;height:24px;border-radius:50%;background:var(--accent);color:var(--accent-t);font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center}
+.steps .h{display:block;margin-bottom:2px}
 .hint{font-size:12px;color:var(--hint);margin:-6px 0 12px}
 </style>
 </head>
@@ -78,7 +82,7 @@ details.more .inner{padding-bottom:6px}
   </div>
 
   <div class="card" style="padding-bottom:2px">
-    <p class="lead" id="story"></p>
+    <div id="story"></div>
     <canvas id="ch"></canvas>
     <div class="note">Оранжевая линия — твои деньги, серая пунктирная — цена квартиры (она растёт).</div>
   </div>
@@ -104,6 +108,8 @@ details.more .inner{padding-bottom:6px}
         <div class="f"><label>Вклад приносит в год</label><div class="in"><input id="rate" inputmode="decimal"><span>%</span></div></div>
         <div class="f"><label>Квартиры дорожают в год</label><div class="in"><input id="growth" inputmode="decimal"><span>%</span></div></div>
       </div>
+      <div class="f"><label>Сейчас плачу за аренду в месяц</label><div class="in"><input id="rent" inputmode="numeric"><span>₽</span></div></div>
+      <div class="hint">После покупки аренду платить не надо — эти деньги пойдут на ипотеку.</div>
       <div class="f"><label>Каждый год откладываю больше на</label><div class="in"><input id="idx" inputmode="decimal"><span>%</span></div></div>
       <div class="hint">Например, при зарплате, которая растёт. Оставь 0, если сумма не меняется.</div>
     </div>
@@ -121,8 +127,8 @@ if (tg){ try{ tg.ready(); tg.expand(); }catch(e){} }
 const $ = id => document.getElementById(id);
 const MAXM = 600;
 let mode = 'full';
-const D = {price:12000000, saved:500000, monthly:60000, rate:14, growth:8, idx:0, dp:20, mrate:12, mterm:20};
-const MONEY = ['price','saved','monthly','mterm'];
+const D = {rent:0, price:12000000, saved:500000, monthly:60000, rate:14, growth:8, idx:0, dp:20, mrate:12, mterm:20};
+const MONEY = ['price','saved','monthly','mterm','rent'];
 const fmt = n => Math.round(n).toLocaleString('ru-RU').replace(/\u00a0|\u202f/g,' ');
 const fmtIn = s => { const d=String(s).replace(/[^\d]/g,''); return d===''?'':fmt(parseInt(d,10)); };
 const rub = n => fmt(n)+' ₽';
@@ -187,19 +193,40 @@ function draw(s){
   if(s.m){c.fillStyle=acc;c.beginPath();c.arc(X(s.m),Y(s.bs[s.m]),5,0,7);c.fill()}
 }
 
+function annuity(loan,rate,years){
+  const n=Math.max(1,years)*12, r=rate/100/12;
+  return r? loan*r/(1-Math.pow(1+r,-n)) : loan/n;
+}
 function story(s){
-  const mort=mode==='mort', what=mort?'первый взнос':'квартира';
-  if (s.m===null) return 'Цены растут быстрее, чем ты копишь. Увеличь сумму в месяц — внизу видно, сколько нужно.';
-  if (s.m===0) return 'Твоих накоплений уже хватает.';
-  let t=`К тому времени ${mort?'нужный первый взнос':'квартира'} вырастет с <b>${short(s.price0)}</b> до <b>${short(s.target)}</b>. `;
-  t+=`Ты отложишь сам <b>${short(s.own+D.saved)}</b>`;
-  t+= s.interest>0 ? `, а ещё <b class="good">${short(s.interest)}</b> добавят проценты по вкладу.` : '.';
+  const mort=mode==='mort';
+  if (s.m===null) return '<p>Цены растут быстрее, чем ты копишь. Увеличь сумму в месяц — в блоке «Хочу накопить за…» видно, сколько нужно.</p>';
+  if (s.m===0) return '<p>Твоих накоплений уже хватает.</p>';
+  const fullNow=D.price, fullThen=s.target/(mort?D.dp/100:1);
+  const steps=[];
+  const own=s.own;
+  steps.push(['Сколько ты накопишь',
+    `Откладываешь ${D.idx>0?'примерно ':''}<b>${rub(D.monthly)}</b> × ${pl(s.m,'месяц','месяца','месяцев')} = <b>${rub(own)}</b>`+
+    (D.saved>0?`<br>Плюс уже накоплено: <b>${rub(D.saved)}</b>`:'')+
+    (s.interest>0?`<br>Плюс проценты по вкладу (${D.rate}% годовых): <b class="good">${rub(s.interest)}</b>`:'')+
+    `<br>Итого будет: <b>${rub(s.bs[s.m])}</b>`]);
+  steps.push([mort?'Сколько нужно на первый взнос':'Сколько будет стоить квартира',
+    `Квартира сегодня стоит <b>${short(fullNow)}</b>, но цены растут на ${D.growth}% в год — через ${dur(s.m)} она будет стоить <b>${short(fullThen)}</b>.`+
+    (mort?`<br>Первый взнос ${D.dp}% = <b>${rub(s.target)}</b>. Столько и нужно набрать.`:'')]);
   if (mort){
-    const full=s.target/(D.dp/100), loan=full-s.target, n=Math.max(1,D.mterm)*12, r=D.mrate/100/12;
-    const pay=r?loan*r/(1-Math.pow(1+r,-n)):loan/n;
-    t+=` Останется взять кредит <b>${short(loan)}</b> — платёж около <b>${rub(pay)}</b> в месяц.`;
+    const loan=fullThen-s.target, pay=annuity(loan,D.mrate,D.mterm), n=Math.max(1,D.mterm)*12;
+    steps.push(['Что будет после покупки',
+      `Банк даст в кредит остальное: ${short(fullThen)} − ${short(s.target)} = <b>${short(loan)}</b> на ${pl(D.mterm,'год','года','лет')} под ${D.mrate}%.<br>Платёж каждый месяц: <b>${rub(pay)}</b>. За весь срок банку уйдёт ${short(pay*n)} (переплата ${short(pay*n-loan)}).`]);
+    const avail=D.monthly+D.rent, gap=pay-avail;
+    const maxLoan=avail*(1-Math.pow(1+D.mrate/100/12,-n))/(D.mrate/100/12||1e-9);
+    const maxPrice=maxLoan/(1-D.dp/100);
+    let v;
+    if (gap<=0) v=`<span class="good"><b>✓ Платёж потянешь.</b></span> Сейчас ты можешь выделять ${rub(avail)} в месяц${D.rent>0?` (откладываешь ${rub(D.monthly)} + аренда ${rub(D.rent)}, которую после покупки платить не надо)`:''}, а платёж ${rub(pay)}.`;
+    else v=`<span style="color:var(--bad)"><b>⚠ Платёж тебе пока не по силам.</b></span> Сейчас ты можешь выделять ${rub(avail)} в месяц${D.rent>0?` (откладываешь ${rub(D.monthly)} + аренда ${rub(D.rent)}, которую после покупки платить не надо)`:''}, а платёж ${rub(pay)} — не хватает <b>${rub(gap)}</b> в месяц.`+
+      `<br>Что можно сделать: взять дешевле квартиру (с платежом ${rub(avail)} кредит выйдет до ${short(maxLoan)}, то есть квартира примерно до ${short(maxPrice)} на момент покупки), взять ипотеку на дольше или увеличить доход.`+
+      (D.rent===0?`<br>Если сейчас ты снимаешь жильё — впиши аренду в «Уточнить расчёт»: после покупки она освободится и пойдёт на платёж.`:'');
+    steps.push(['Потянешь ли платёж',v]);
   }
-  return t;
+  return '<ol class="steps">'+steps.map(([h,t])=>`<li><b class="h">${h}</b>${t}</li>`).join('')+'</ol>';
 }
 
 function calc(){
@@ -224,7 +251,7 @@ function calc(){
   try{ localStorage.setItem('kv2',JSON.stringify({D,mode})) }catch(e){}
 }
 
-const FIELDS=['price','saved','monthly','rate','growth','idx','mrate','mterm'];
+const FIELDS=['rent','price','saved','monthly','rate','growth','idx','mrate','mterm'];
 function setMode(m){
   mode=m; document.querySelectorAll('#mode button').forEach(x=>x.classList.toggle('on',x.dataset.m===m));
   $('dpBox').style.display=m==='mort'?'block':'none'; $('mBox').style.display=m==='mort'?'flex':'none';
