@@ -60,6 +60,19 @@ input[type=range]{width:100%;accent-color:var(--accent)}
   </div>
 
   <div class="card">
+    <div class="row">
+      <div class="f"><label>Зарплата на руки в месяц</label><div class="in"><input id="salary" inputmode="numeric"><span>₽</span></div></div>
+      <div class="f"><label>Аренда сейчас в месяц</label><div class="in"><input id="rent" inputmode="numeric"><span>₽</span></div></div>
+    </div>
+    <div class="row">
+      <div class="f"><label>Прочие расходы в месяц</label><div class="in"><input id="other" inputmode="numeric"><span>₽</span></div></div>
+      <div class="f"><label>Рост аренды в год</label><div class="in"><input id="rg" inputmode="decimal"><span>%</span></div></div>
+    </div>
+    <div class="note" id="free" style="padding:0 0 10px"></div>
+    <button class="btn alt" id="useFree" style="margin:0 0 12px;display:none">Откладывать всё свободное</button>
+  </div>
+
+  <div class="card">
     <div class="f"><label>Цена квартиры сегодня</label><div class="in"><input id="price" inputmode="numeric"><span>₽</span></div></div>
     <div class="f" id="dpBox" style="display:none"><label>Первый взнос, % от цены: <b id="dpV">20</b>%</label><input type="range" id="dp" min="10" max="50" step="1" value="20"></div>
     <div class="row">
@@ -71,7 +84,14 @@ input[type=range]{width:100%;accent-color:var(--accent)}
       <div class="f"><label>Рост цен на жильё, % в год</label><div class="in"><input id="growth" inputmode="decimal"><span>%</span></div></div>
     </div>
     <div class="f"><label>Увеличиваю взнос каждый год на</label><div class="in"><input id="idx" inputmode="decimal"><span>%</span></div></div>
+    <div class="row" id="mBox" style="display:none">
+      <div class="f"><label>Ставка ипотеки</label><div class="in"><input id="mrate" inputmode="decimal"><span>%</span></div></div>
+      <div class="f"><label>Срок ипотеки, лет</label><div class="in"><input id="mterm" inputmode="numeric"><span>лет</span></div></div>
+    </div>
   </div>
+
+  <div class="sec" id="bsec">Бюджет</div>
+  <div class="card" id="bcard"><table class="cmp" id="bud"></table></div>
 
   <div class="warn" id="warn"></div>
 
@@ -114,7 +134,10 @@ if (tg){ try{ tg.ready(); tg.expand(); }catch(e){} }
 const $ = id => document.getElementById(id);
 const MAXM = 600;
 let mode = 'full';
-const D = {price:12000000, saved:500000, monthly:60000, rate:14, growth:8, idx:5, dp:20};
+const D = {price:12000000, saved:500000, monthly:60000, rate:14, growth:8, idx:5, dp:20,
+  salary:150000, rent:50000, other:40000, rg:8, mrate:12, mterm:20};
+const MONEY = ['price','saved','monthly','salary','rent','other','mterm'];
+const fmtIn = s => { const d=String(s).replace(/[^\d]/g,''); return d===''?'':fmt(parseInt(d,10)); };
 
 const fmt = n => Math.round(n).toLocaleString('ru-RU').replace(/ /g,' ');
 const rub = n => fmt(n)+' ₽';
@@ -181,6 +204,38 @@ function draw(s){
   if(s.m){c.fillStyle=acc;c.beginPath();c.arc(X(s.m),Y(s.bs[s.m]),5,0,7);c.fill()}
 }
 
+function budget(s){
+  const sal=D.salary, free=sal-D.rent-D.other;
+  const fe=$('free'), ub=$('useFree');
+  const rows=[];
+  if (sal>0){
+    fe.textContent = free>0 ? `Свободно после аренды и расходов: ${rub(free)} в месяц (${Math.round(free/sal*100)}% зарплаты)` : 'Аренда и расходы съедают всю зарплату — копить не из чего.';
+    ub.style.display = free>0 && Math.round(free)!==Math.round(D.monthly) ? 'block':'none';
+    ub.textContent = 'Откладывать всё свободное: '+rub(Math.max(0,free));
+    rows.push(['Откладываешь от зарплаты', Math.round(D.monthly/sal*100)+'%']);
+    if (D.monthly>free && free>0) rows.push(['⚠ Больше, чем остаётся свободным', '+'+rub(D.monthly-free)]);
+  } else { fe.textContent=''; ub.style.display='none'; }
+  if (D.rent>0){
+    if (sal>0) rows.push(['Аренда — доля зарплаты', Math.round(D.rent/sal*100)+'%']);
+    if (s.m){
+      let tot=0; for(let i=0;i<s.m;i++) tot+=D.rent*Math.pow(1+D.rg/100,i/12);
+      rows.push(['Уйдёт на аренду, пока копишь', short(tot)]);
+      const rentThen=D.rent*Math.pow(1+D.rg/100,s.m/12);
+      if (mode==='full') rows.push(['Аренда к моменту покупки', rub(rentThen)+'/мес']);
+    }
+  }
+  if (mode==='mort' && s.m){
+    const full=s.target/(D.dp/100), loan=full-s.target, n=Math.max(1,D.mterm)*12, r=D.mrate/100/12;
+    const pay = r? loan*r/(1-Math.pow(1+r,-n)) : loan/n;
+    rows.push(['Кредит на покупку', short(loan)]);
+    rows.push(['Платёж по ипотеке', rub(pay)+'/мес']);
+    if (sal>0) rows.push(['Платёж — доля зарплаты сейчас', Math.round(pay/sal*100)+'%']);
+    rows.push(['Переплата по ипотеке', short(pay*n-loan)]);
+  }
+  $('bud').innerHTML=rows.map(([a,b])=>`<tr><td>${a}</td><td>${b}</td></tr>`).join('');
+  $('bsec').style.display=$('bcard').style.display=rows.length?'block':'none';
+}
+
 function calc(){
   const s = sim(opts());
   const warn=$('warn');
@@ -207,26 +262,28 @@ function calc(){
   const y=+$('yrs').value; $('yV').textContent=y;
   const nm=needMonthly(y);
   $('need').innerHTML = nm>=1e8 ? 'Не получится при таких условиях.' : `Чтобы успеть за <b>${y}</b> ${y%10==1&&y!=11?'год':(y%10>1&&y%10<5&&(y<10||y>20))?'года':'лет'}, откладывай <b>${rub(nm)}</b> в месяц ${D.monthly?`(сейчас ${rub(D.monthly)})`:''}`;
+  budget(s);
   window.__last={s,y,nm};
   try{ localStorage.setItem('kv',JSON.stringify({D,mode})) }catch(e){}
 }
 
-const map={price:'price',saved:'saved',monthly:'monthly',rate:'rate',growth:'growth',idx:'idx'};
+const FIELDS=['price','saved','monthly','rate','growth','idx','salary','rent','other','rg','mrate','mterm'];
 function bind(){
-  for (const k in map){
-    const el=$(k);
-    el.value = (k==='rate'||k==='growth'||k==='idx') ? String(D[k]).replace('.',',') : fmt(D[k]);
+  for (const k of FIELDS){
+    const el=$(k), money=MONEY.includes(k);
+    el.value = money ? fmt(D[k]) : String(D[k]).replace('.',',');
     el.addEventListener('input',()=>{
-      if(!(k==='rate'||k==='growth'||k==='idx')){const v=num(el.value);el.value=v?fmt(v):'';D[k]=v}
+      if(money){el.value=fmtIn(el.value);D[k]=num(el.value)}
       else D[k]=num(el.value);
       calc();
     });
   }
+  $('useFree').onclick=()=>{D.monthly=Math.max(0,Math.round((D.salary-D.rent-D.other)/1000)*1000);$('monthly').value=fmt(D.monthly);calc()};
   $('dp').addEventListener('input',e=>{D.dp=+e.target.value;$('dpV').textContent=D.dp;calc()});
   $('yrs').addEventListener('input',calc);
   document.querySelectorAll('#mode button').forEach(b=>b.onclick=()=>{
     mode=b.dataset.m; document.querySelectorAll('#mode button').forEach(x=>x.classList.toggle('on',x===b));
-    $('dpBox').style.display=mode==='mort'?'block':'none'; calc();
+    $('dpBox').style.display=mode==='mort'?'block':'none'; $('mBox').style.display=mode==='mort'?'flex':'none'; calc();
   });
   $('share').onclick=()=>{
     const l=window.__last, s=l.s;
@@ -240,7 +297,7 @@ try{const sv=JSON.parse(localStorage.getItem('kv')||'null'); if(sv){Object.assig
 bind();
 $('dp').value=D.dp;$('dpV').textContent=D.dp;
 document.querySelectorAll('#mode button').forEach(x=>x.classList.toggle('on',x.dataset.m===mode));
-$('dpBox').style.display=mode==='mort'?'block':'none';
+$('dpBox').style.display=mode==='mort'?'block':'none';$('mBox').style.display=mode==='mort'?'flex':'none';
 calc();
 addEventListener('resize',calc);
 </script>
