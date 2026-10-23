@@ -47,83 +47,70 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 .btn{display:block;width:100%;border:0;border-radius:14px;background:var(--accent);color:var(--accent-t);font:inherit;font-weight:700;padding:14px;margin-top:6px}
 .btn.alt{background:var(--field);color:var(--text)}
 .good{color:var(--good)}
+.lead{font-size:15px;line-height:1.5;margin:0 0 12px}
+.lead b{white-space:nowrap}
+details.more{background:var(--card);border-radius:16px;padding:0 14px;margin-bottom:12px}
+details.more summary{padding:14px 0;font-weight:600;font-size:15px;cursor:pointer;list-style:none;display:flex;justify-content:space-between}
+details.more summary::-webkit-details-marker{display:none}
+details.more summary:after{content:"▾";color:var(--hint)}
+details.more[open] summary:after{content:"▴"}
+details.more .inner{padding-bottom:6px}
+.hint{font-size:12px;color:var(--hint);margin:-6px 0 12px}
 </style>
 </head>
 <body>
 <div class="wrap">
   <h1>🏠 Накопи на квартиру</h1>
-  <div class="sub">Сколько копить, с учётом вклада и роста цен</div>
-
-  <div class="seg" id="mode">
-    <button data-m="full" class="on">Полностью</button>
-    <button data-m="mort">Первый взнос (ипотека)</button>
-  </div>
+  <div class="sub">Введи три числа — узнаешь, когда хватит денег</div>
 
   <div class="card">
-    <div class="row">
-      <div class="f"><label>Зарплата на руки в месяц</label><div class="in"><input id="salary" inputmode="numeric"><span>₽</span></div></div>
-      <div class="f"><label>Аренда сейчас в месяц</label><div class="in"><input id="rent" inputmode="numeric"><span>₽</span></div></div>
-    </div>
-    <div class="row">
-      <div class="f"><label>Прочие расходы в месяц</label><div class="in"><input id="other" inputmode="numeric"><span>₽</span></div></div>
-      <div class="f"><label>Рост аренды в год</label><div class="in"><input id="rg" inputmode="decimal"><span>%</span></div></div>
-    </div>
-    <div class="note" id="free" style="padding:0 0 10px"></div>
-    <button class="btn alt" id="useFree" style="margin:0 0 12px;display:none">Откладывать всё свободное</button>
+    <div class="f"><label>Сколько стоит квартира сегодня</label><div class="in"><input id="price" inputmode="numeric"><span>₽</span></div></div>
+    <div class="f"><label>Сколько откладываю каждый месяц</label><div class="in"><input id="monthly" inputmode="numeric"><span>₽</span></div></div>
+    <div class="f"><label>Сколько уже накоплено</label><div class="in"><input id="saved" inputmode="numeric"><span>₽</span></div></div>
   </div>
-
-  <div class="card">
-    <div class="f"><label>Цена квартиры сегодня</label><div class="in"><input id="price" inputmode="numeric"><span>₽</span></div></div>
-    <div class="f" id="dpBox" style="display:none"><label>Первый взнос, % от цены: <b id="dpV">20</b>%</label><input type="range" id="dp" min="10" max="50" step="1" value="20"></div>
-    <div class="row">
-      <div class="f"><label>Уже накоплено</label><div class="in"><input id="saved" inputmode="numeric"><span>₽</span></div></div>
-      <div class="f"><label>Откладываю в месяц</label><div class="in"><input id="monthly" inputmode="numeric"><span>₽</span></div></div>
-    </div>
-    <div class="row">
-      <div class="f"><label>Доход вклада, % годовых</label><div class="in"><input id="rate" inputmode="decimal"><span>%</span></div></div>
-      <div class="f"><label>Рост цен на жильё, % в год</label><div class="in"><input id="growth" inputmode="decimal"><span>%</span></div></div>
-    </div>
-    <div class="f"><label>Увеличиваю взнос каждый год на</label><div class="in"><input id="idx" inputmode="decimal"><span>%</span></div></div>
-    <div class="row" id="mBox" style="display:none">
-      <div class="f"><label>Ставка ипотеки</label><div class="in"><input id="mrate" inputmode="decimal"><span>%</span></div></div>
-      <div class="f"><label>Срок ипотеки, лет</label><div class="in"><input id="mterm" inputmode="numeric"><span>лет</span></div></div>
-    </div>
-  </div>
-
-  <div class="sec" id="bsec">Бюджет</div>
-  <div class="card" id="bcard"><table class="cmp" id="bud"></table></div>
 
   <div class="warn" id="warn"></div>
 
   <div class="hero">
-    <small>Накопишь на квартиру через</small>
+    <small id="heroLbl">Накопишь на квартиру через</small>
     <div class="big" id="res">—</div>
     <div class="when" id="when"></div>
   </div>
 
-  <div class="stats">
-    <div class="st"><b id="sTarget">—</b><small>нужно будет к тому моменту</small></div>
-    <div class="st"><b id="sOwn">—</b><small>ты отложишь сам</small></div>
-    <div class="st"><b id="sInt" class="good">—</b><small>заработают проценты</small></div>
-    <div class="st"><b id="sGrow">—</b><small>«съест» рост цен</small></div>
+  <div class="card" style="padding-bottom:2px">
+    <p class="lead" id="story"></p>
+    <canvas id="ch"></canvas>
+    <div class="note">Оранжевая линия — твои деньги, серая пунктирная — цена квартиры (она растёт).</div>
   </div>
 
-  <div class="card" style="padding:10px 10px 4px"><canvas id="ch"></canvas>
-    <div class="note">Оранжевая линия — твои накопления, серая — цена квартиры (цель).</div></div>
-
-  <div class="sec">Сравнение</div>
   <div class="card">
-    <table class="cmp" id="cmp"></table>
-  </div>
-
-  <div class="sec">Хочу быстрее</div>
-  <div class="card">
-    <div class="f"><label>Накопить за <b id="yV">5</b> лет</label><input type="range" id="yrs" min="1" max="25" step="1" value="5"></div>
+    <div class="f"><label>Хочу накопить за <b id="yV">5</b> лет</label><input type="range" id="yrs" min="1" max="25" step="1" value="5"></div>
     <div class="note" style="color:var(--text);font-size:15px" id="need"></div>
   </div>
 
+  <details class="more">
+    <summary>Уточнить расчёт</summary>
+    <div class="inner">
+      <div class="seg" id="mode">
+        <button data-m="full" class="on">Куплю за всю сумму</button>
+        <button data-m="mort">В ипотеку</button>
+      </div>
+      <div class="f" id="dpBox" style="display:none"><label>Первый взнос: <b id="dpV">20</b>% от цены</label><input type="range" id="dp" min="10" max="50" step="1" value="20"></div>
+      <div class="row" id="mBox" style="display:none">
+        <div class="f"><label>Ставка ипотеки</label><div class="in"><input id="mrate" inputmode="decimal"><span>%</span></div></div>
+        <div class="f"><label>Срок, лет</label><div class="in"><input id="mterm" inputmode="numeric"><span>лет</span></div></div>
+      </div>
+      <div class="row">
+        <div class="f"><label>Вклад приносит в год</label><div class="in"><input id="rate" inputmode="decimal"><span>%</span></div></div>
+        <div class="f"><label>Квартиры дорожают в год</label><div class="in"><input id="growth" inputmode="decimal"><span>%</span></div></div>
+      </div>
+      <div class="f"><label>Каждый год откладываю больше на</label><div class="in"><input id="idx" inputmode="decimal"><span>%</span></div></div>
+      <div class="hint">Например, при зарплате, которая растёт. Оставь 0, если сумма не меняется.</div>
+    </div>
+  </details>
+
   <button class="btn" id="share">Поделиться расчётом</button>
-  <div class="note" style="margin-top:12px">Расчёт ориентировочный: проценты капитализируются ежемесячно, налог на доход по вкладам и изменения ставок не учитываются. Это не инвестиционная рекомендация.</div>
+  <div class="note" style="margin-top:12px">Расчёт ориентировочный: проценты начисляются ежемесячно, налоги и смена ставок не учитываются. Это не инвестиционная рекомендация.</div>
 </div>
 
 <script>
@@ -134,50 +121,46 @@ if (tg){ try{ tg.ready(); tg.expand(); }catch(e){} }
 const $ = id => document.getElementById(id);
 const MAXM = 600;
 let mode = 'full';
-const D = {price:12000000, saved:500000, monthly:60000, rate:14, growth:8, idx:5, dp:20,
-  salary:150000, rent:50000, other:40000, rg:8, mrate:12, mterm:20};
-const MONEY = ['price','saved','monthly','salary','rent','other','mterm'];
+const D = {price:12000000, saved:500000, monthly:60000, rate:14, growth:8, idx:0, dp:20, mrate:12, mterm:20};
+const MONEY = ['price','saved','monthly','mterm'];
+const fmt = n => Math.round(n).toLocaleString('ru-RU').replace(/\u00a0|\u202f/g,' ');
 const fmtIn = s => { const d=String(s).replace(/[^\d]/g,''); return d===''?'':fmt(parseInt(d,10)); };
-
-const fmt = n => Math.round(n).toLocaleString('ru-RU').replace(/ /g,' ');
 const rub = n => fmt(n)+' ₽';
 const short = n => n>=1e6 ? (n/1e6).toFixed(n>=1e7?1:2).replace('.',',').replace(/,?0+$/,'')+' млн ₽' : fmt(n)+' ₽';
 const num = s => parseFloat(String(s).replace(/\s/g,'').replace(',','.')) || 0;
+const pl=(n,a,b,c)=>{const k=n%100,l=n%10;return n+' '+((k>10&&k<20)?c:l==1?a:(l>1&&l<5)?b:c)};
 
 function dur(m){
-  const y = Math.floor(m/12), mm = m%12, out=[];
-  const pl=(n,a,b,c)=>{const k=n%100; const l=n%10; return n+' '+((k>10&&k<20)?c:l==1?a:(l>1&&l<5)?b:c)};
+  const y=Math.floor(m/12), mm=m%12, out=[];
   if(y) out.push(pl(y,'год','года','лет'));
   if(mm) out.push(pl(mm,'месяц','месяца','месяцев'));
   return out.join(' ') || 'сразу';
 }
 function dateAfter(m){
-  const d = new Date(); d.setMonth(d.getMonth()+m);
+  const d=new Date(); d.setMonth(d.getMonth()+m);
   return d.toLocaleDateString('ru-RU',{month:'long',year:'numeric'});
 }
 
 function sim(o){
-  const g = Math.pow(1+o.growth/100,1/12)-1;
-  const r = o.rate/100/12;
-  const k = Math.pow(1+o.idx/100,1/12);
-  const frac = o.mort ? o.dp/100 : 1;
+  const g=Math.pow(1+o.growth/100,1/12)-1;
+  const r=o.rate/100/12;
+  const k=Math.pow(1+o.idx/100,1/12);
+  const frac=o.mort ? o.dp/100 : 1;
+  const p0=o.price*frac;
   let bal=o.saved, price=o.price, c=o.monthly, own=0;
-  const bs=[bal], ts=[price*frac];
-  if (bal >= price*frac) return {m:0,bs,ts,own:0,interest:0,target:price*frac,price0:price*frac};
+  const bs=[bal], ts=[p0];
+  if (bal>=p0) return {m:0,bs,ts,own:0,interest:0,target:p0,price0:p0};
   for (let m=1;m<=MAXM;m++){
-    bal = bal*(1+r)+c; own+=c; c*=k; price*=(1+g);
+    bal=bal*(1+r)+c; own+=c; c*=k; price*=(1+g);
     bs.push(bal); ts.push(price*frac);
-    if (bal >= price*frac) return {m,bs,ts,own,interest:bal-o.saved-own,target:price*frac,price0:price0f(o)};
+    if (bal>=price*frac) return {m,bs,ts,own,interest:bal-o.saved-own,target:price*frac,price0:p0};
   }
-  return {m:null,bs,ts,own,interest:bal-o.saved-own,target:price*frac,price0:price0f(o)};
+  return {m:null,bs,ts,own,interest:bal-o.saved-own,target:price*frac,price0:p0};
 }
-const price0f = o => o.price*(o.mort?o.dp/100:1);
-
-function opts(extra){ return Object.assign({mort:mode==='mort'},D,extra||{}); }
+const opts = extra => Object.assign({mort:mode==='mort'},D,extra||{});
 
 function needMonthly(years){
-  const n = years*12;
-  let lo=0, hi=1e9;
+  const n=years*12; let lo=0, hi=1e9;
   for (let i=0;i<60;i++){
     const mid=(lo+hi)/2, s=sim(opts({monthly:mid}));
     if (s.m!==null && s.m<=n) hi=mid; else lo=mid;
@@ -195,7 +178,7 @@ function draw(s){
   const maxY=Math.max(...s.ts,...s.bs)*1.05;
   const L=44,R=8,T=8,B=22, X=i=>L+(w-L-R)*i/n, Y=v=>T+(h-T-B)*(1-v/maxY);
   c.font='11px sans-serif'; c.fillStyle=hint; c.strokeStyle=line; c.lineWidth=1;
-  for(let i=0;i<=4;i++){const v=maxY*i/4,y=Y(v);c.beginPath();c.moveTo(L,y);c.lineTo(w-R,y);c.stroke();c.textAlign='right';c.fillText(v>=1e6?(v/1e6).toFixed(0)+'м':fmt(v/1e3)+'т',L-5,y+4)}
+  for(let i=0;i<=4;i++){const v=maxY*i/4,y=Y(v);c.beginPath();c.moveTo(L,y);c.lineTo(w-R,y);c.stroke();c.textAlign='right';c.fillText(v>=1e6?(v/1e6).toFixed(0)+' млн':fmt(v/1e3)+' т',L-5,y+4)}
   c.textAlign='center';
   const yrs=n/12, stepY=yrs>20?5:yrs>10?2:1;
   for(let y=0;y<=yrs;y+=stepY){c.fillText(y?y+' л':'сейчас',X(y*12),h-6)}
@@ -204,100 +187,70 @@ function draw(s){
   if(s.m){c.fillStyle=acc;c.beginPath();c.arc(X(s.m),Y(s.bs[s.m]),5,0,7);c.fill()}
 }
 
-function budget(s){
-  const sal=D.salary, free=sal-D.rent-D.other;
-  const fe=$('free'), ub=$('useFree');
-  const rows=[];
-  if (sal>0){
-    fe.textContent = free>0 ? `Свободно после аренды и расходов: ${rub(free)} в месяц (${Math.round(free/sal*100)}% зарплаты)` : 'Аренда и расходы съедают всю зарплату — копить не из чего.';
-    ub.style.display = free>0 && Math.round(free)!==Math.round(D.monthly) ? 'block':'none';
-    ub.textContent = 'Откладывать всё свободное: '+rub(Math.max(0,free));
-    rows.push(['Откладываешь от зарплаты', Math.round(D.monthly/sal*100)+'%']);
-    if (D.monthly>free && free>0) rows.push(['⚠ Больше, чем остаётся свободным', '+'+rub(D.monthly-free)]);
-  } else { fe.textContent=''; ub.style.display='none'; }
-  if (D.rent>0){
-    if (sal>0) rows.push(['Аренда — доля зарплаты', Math.round(D.rent/sal*100)+'%']);
-    if (s.m){
-      let tot=0; for(let i=0;i<s.m;i++) tot+=D.rent*Math.pow(1+D.rg/100,i/12);
-      rows.push(['Уйдёт на аренду, пока копишь', short(tot)]);
-      const rentThen=D.rent*Math.pow(1+D.rg/100,s.m/12);
-      if (mode==='full') rows.push(['Аренда к моменту покупки', rub(rentThen)+'/мес']);
-    }
-  }
-  if (mode==='mort' && s.m){
+function story(s){
+  const mort=mode==='mort', what=mort?'первый взнос':'квартира';
+  if (s.m===null) return 'Цены растут быстрее, чем ты копишь. Увеличь сумму в месяц — внизу видно, сколько нужно.';
+  if (s.m===0) return 'Твоих накоплений уже хватает.';
+  let t=`К тому времени ${mort?'нужный первый взнос':'квартира'} вырастет с <b>${short(s.price0)}</b> до <b>${short(s.target)}</b>. `;
+  t+=`Ты отложишь сам <b>${short(s.own+D.saved)}</b>`;
+  t+= s.interest>0 ? `, а ещё <b class="good">${short(s.interest)}</b> добавят проценты по вкладу.` : '.';
+  if (mort){
     const full=s.target/(D.dp/100), loan=full-s.target, n=Math.max(1,D.mterm)*12, r=D.mrate/100/12;
-    const pay = r? loan*r/(1-Math.pow(1+r,-n)) : loan/n;
-    rows.push(['Кредит на покупку', short(loan)]);
-    rows.push(['Платёж по ипотеке', rub(pay)+'/мес']);
-    if (sal>0) rows.push(['Платёж — доля зарплаты сейчас', Math.round(pay/sal*100)+'%']);
-    rows.push(['Переплата по ипотеке', short(pay*n-loan)]);
+    const pay=r?loan*r/(1-Math.pow(1+r,-n)):loan/n;
+    t+=` Останется взять кредит <b>${short(loan)}</b> — платёж около <b>${rub(pay)}</b> в месяц.`;
   }
-  $('bud').innerHTML=rows.map(([a,b])=>`<tr><td>${a}</td><td>${b}</td></tr>`).join('');
-  $('bsec').style.display=$('bcard').style.display=rows.length?'block':'none';
+  return t;
 }
 
 function calc(){
-  const s = sim(opts());
-  const warn=$('warn');
-  const years = s.m===null ? null : s.m;
+  const s=sim(opts()), warn=$('warn');
+  $('heroLbl').textContent = mode==='mort' ? 'Накопишь на первый взнос через' : 'Накопишь на квартиру через';
   if (s.m===null){
     $('res').textContent='больше 50 лет';
-    $('when').textContent='При таких вводных цель убегает быстрее, чем ты копишь';
-    warn.style.display='block';
-    warn.textContent='Цены растут быстрее, чем копятся деньги. Увеличь ежемесячный взнос или ставку — смотри блок «Хочу быстрее» ниже.';
+    $('when').textContent='Цена убегает быстрее, чем ты копишь';
+    warn.style.display='none';
   } else if (s.m===0){
-    $('res').textContent='уже хватает 🎉'; $('when').textContent='Накоплений достаточно прямо сейчас'; warn.style.display='none';
+    $('res').textContent='уже хватает 🎉'; $('when').textContent=''; warn.style.display='none';
   } else {
     $('res').textContent=dur(s.m); $('when').textContent='≈ '+dateAfter(s.m); warn.style.display='none';
   }
-  $('sTarget').textContent=short(s.target);
-  $('sOwn').textContent=short(s.own+D.saved);
-  $('sInt').textContent='+'+short(Math.max(0,s.interest));
-  $('sGrow').textContent=short(Math.max(0,s.target-s.price0));
+  $('story').innerHTML=story(s);
   draw(s);
-
-  const rows=[['Под матрасом (0%)', sim(opts({rate:0}))],['На вкладе '+D.rate+'%', s],['Вклад + цены не растут', sim(opts({growth:0}))]];
-  $('cmp').innerHTML=rows.map(([n,r])=>`<tr><td>${n}</td><td>${r.m===null?'> 50 лет':r.m===0?'уже':dur(r.m)}</td></tr>`).join('');
 
   const y=+$('yrs').value; $('yV').textContent=y;
   const nm=needMonthly(y);
-  $('need').innerHTML = nm>=1e8 ? 'Не получится при таких условиях.' : `Чтобы успеть за <b>${y}</b> ${y%10==1&&y!=11?'год':(y%10>1&&y%10<5&&(y<10||y>20))?'года':'лет'}, откладывай <b>${rub(nm)}</b> в месяц ${D.monthly?`(сейчас ${rub(D.monthly)})`:''}`;
-  budget(s);
+  $('need').innerHTML = nm>=1e8 ? 'Не получится при таких условиях.' : `Чтобы успеть, откладывай <b>${rub(nm)}</b> в месяц${D.monthly?` (сейчас ${rub(D.monthly)})`:''}`;
   window.__last={s,y,nm};
-  try{ localStorage.setItem('kv',JSON.stringify({D,mode})) }catch(e){}
+  try{ localStorage.setItem('kv2',JSON.stringify({D,mode})) }catch(e){}
 }
 
-const FIELDS=['price','saved','monthly','rate','growth','idx','salary','rent','other','rg','mrate','mterm'];
+const FIELDS=['price','saved','monthly','rate','growth','idx','mrate','mterm'];
+function setMode(m){
+  mode=m; document.querySelectorAll('#mode button').forEach(x=>x.classList.toggle('on',x.dataset.m===m));
+  $('dpBox').style.display=m==='mort'?'block':'none'; $('mBox').style.display=m==='mort'?'flex':'none';
+}
 function bind(){
   for (const k of FIELDS){
     const el=$(k), money=MONEY.includes(k);
     el.value = money ? fmt(D[k]) : String(D[k]).replace('.',',');
     el.addEventListener('input',()=>{
-      if(money){el.value=fmtIn(el.value);D[k]=num(el.value)}
-      else D[k]=num(el.value);
+      if(money){el.value=fmtIn(el.value);D[k]=num(el.value)} else D[k]=num(el.value);
       calc();
     });
   }
-  $('useFree').onclick=()=>{D.monthly=Math.max(0,Math.round((D.salary-D.rent-D.other)/1000)*1000);$('monthly').value=fmt(D.monthly);calc()};
   $('dp').addEventListener('input',e=>{D.dp=+e.target.value;$('dpV').textContent=D.dp;calc()});
   $('yrs').addEventListener('input',calc);
-  document.querySelectorAll('#mode button').forEach(b=>b.onclick=()=>{
-    mode=b.dataset.m; document.querySelectorAll('#mode button').forEach(x=>x.classList.toggle('on',x===b));
-    $('dpBox').style.display=mode==='mort'?'block':'none'; $('mBox').style.display=mode==='mort'?'flex':'none'; calc();
-  });
+  document.querySelectorAll('#mode button').forEach(b=>b.onclick=()=>{setMode(b.dataset.m);calc()});
   $('share').onclick=()=>{
-    const l=window.__last, s=l.s;
-    const t=`🏠 Накоплю на квартиру за ${s.m===null?'50+ лет':dur(s.m)}: цена ${short(D.price)}, откладываю ${rub(D.monthly)}/мес, вклад ${D.rate}%. Посчитай свою:`;
-    const url='https://t.me/'+BOT;
-    const link='https://t.me/share/url?url='+encodeURIComponent(url)+'&text='+encodeURIComponent(t);
+    const s=window.__last.s;
+    const t=`🏠 Накоплю на квартиру за ${s.m===null?'50+ лет':dur(s.m)}: цена ${short(D.price)}, откладываю ${rub(D.monthly)}/мес. Посчитай свою:`;
+    const link='https://t.me/share/url?url='+encodeURIComponent('https://t.me/'+BOT)+'&text='+encodeURIComponent(t);
     if(tg&&tg.openTelegramLink) tg.openTelegramLink(link); else window.open(link,'_blank');
   };
 }
-try{const sv=JSON.parse(localStorage.getItem('kv')||'null'); if(sv){Object.assign(D,sv.D);mode=sv.mode||'full'}}catch(e){}
-bind();
+try{const sv=JSON.parse(localStorage.getItem('kv2')||'null'); if(sv){Object.assign(D,sv.D);mode=sv.mode||'full'}}catch(e){}
+bind(); setMode(mode);
 $('dp').value=D.dp;$('dpV').textContent=D.dp;
-document.querySelectorAll('#mode button').forEach(x=>x.classList.toggle('on',x.dataset.m===mode));
-$('dpBox').style.display=mode==='mort'?'block':'none';$('mBox').style.display=mode==='mort'?'flex':'none';
 calc();
 addEventListener('resize',calc);
 </script>
